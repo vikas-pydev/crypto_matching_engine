@@ -1,0 +1,152 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #1a1a2e;
+    color: #e0e0e0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding-top: 20px;
+}
+
+#app {
+    background-color: #16213e;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    padding: 30px;
+    width: 90%;
+    max-width: 1200px;
+    box-sizing: border-box;
+}
+
+h1 {
+    color: #0f3460;
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 2.5em;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+.section {
+    background-color: #0f3460;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.section h2 {
+    color: #e94560;
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.8em;
+    border-bottom: 2px solid #e94560;
+    padding-bottom: 10px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    color: #e0e0e0;
+    font-weight: bold;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    width: calc(100% - 20px);
+    padding: 10px;
+    border: 1px solid #533483;
+    border-radius: 5px;
+    background-color: #1a1a2e;
+    color: #e0e0e0;
+    font-size: 1em;
+}
+
+input[type="number"]:disabled {
+    background-color: #3e2c5c;
+    cursor: not-allowed;
+}
+
+button {
+    background-color: #e94560;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1em;
+    transition: background-color 0.3s ease;
+    width: 100%;
+}
+
+button:hover {
+    background-color: #b8324a;
+}
+
+.order-book-display {
+    display: flex;
+    gap: 20px;
+}
+
+.order-book-display > div {
+    flex: 1;
+    background-color: #1a1a2e;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+.order-book-display h3 {
+    color: #e94560;
+    margin-top: 0;
+    border-bottom: 1px solid #533483;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+ul li {
+    padding: 8px 0;
+    border-bottom: 1px dashed #3e2c5c;
+    font-size: 0.95em;
+}
+
+ul li:last-child {
+    border-bottom: none;
+}
+
+.bids ul li {
+    color: #66bb6a; /* Green for buy orders */
+}
+
+.asks ul li {
+    color: #ef5350; /* Red for sell orders */
+}
+
+.trade-feed ul li {
+    color: #8d6e63; /* A neutral color for trades */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .container {
+        grid-template-columns: 1fr;
+    }
+}

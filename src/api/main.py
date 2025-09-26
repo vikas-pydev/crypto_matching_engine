@@ -1,13 +1,24 @@
-from fastapi import FastAPI, WebSocket, HTTPException
+from fastapi import FastAPI, WebSocket, HTTPException, WebSocketDisconnect, Body
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
 import json
 import asyncio
 from datetime import datetime
 import uuid
+from pydantic import BaseModel
+from loguru import logger
 
 from ..engine.order import Order, OrderType, OrderSide
 from ..engine.orderbook import OrderBook
+
+
+class OrderCreate(BaseModel):
+    symbol: str
+    side: OrderSide
+    order_type: OrderType
+    quantity: float
+    price: Optional[float] = None
+
 
 app = FastAPI(title="Crypto Matching Engine API")
 
@@ -29,6 +40,26 @@ order_books = {
 # WebSocket connections per symbol
 websocket_connections = {}
 
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+manager = ConnectionManager()
+
 async def broadcast_orderbook_updates(symbol: str):
     """Broadcast order book updates to all connected clients"""
     if symbol not in websocket_connections or not websocket_connections[symbol]:
@@ -36,6 +67,8 @@ async def broadcast_orderbook_updates(symbol: str):
     
     orderbook = order_books[symbol]
     snapshot = orderbook.get_order_book_snapshot()
+    
+    logger.info(f"Sending snapshot: {snapshot}")
     
     # Create a copy of the list to avoid modification during iteration
     connections = websocket_connections[symbol].copy()
@@ -51,13 +84,15 @@ async def broadcast_orderbook_updates(symbol: str):
 
 @app.post("/api/v1/orders")
 async def create_order(
-    symbol: str,
-    side: OrderSide,
-    order_type: OrderType,
-    quantity: float,
-    price: Optional[float] = None
+    order_data: OrderCreate = Body(...)
 ):
     """Create a new order"""
+    symbol = order_data.symbol
+    side = order_data.side
+    order_type = order_data.order_type
+    quantity = order_data.quantity
+    price = order_data.price
+
     if symbol not in order_books:
         raise HTTPException(status_code=404, detail="Trading pair not found")
     
@@ -78,7 +113,21 @@ async def create_order(
     
     # Broadcast order book updates
     await broadcast_orderbook_updates(symbol)
-    
+
+    # Broadcast trade updates
+    if trades:
+        # Create a copy of the list to avoid modification during iteration
+        connections = websocket_connections[symbol].copy()
+        for websocket in connections:
+            try:
+                await websocket.send_json({"trades": trades})
+            except Exception as e:
+                try:
+                    websocket_connections[symbol].remove(websocket)
+                    await websocket.close()
+                except:
+                    pass  # Connection might already be closed
+
     return {
         "order": order,
         "trades": trades
@@ -129,11 +178,6 @@ async def get_order_book(symbol: str):
         "sell_orders": order_book.sell_orders.get_all_orders()
     }
 
-@app.delete("/order/{order_id}")
-async def cancel_order(order_id: str):
-    # Find the order in any of the order books and cancel it
-    for symbol, order_book in order_books.items():
-        if order_book.cancel_order(order_id):
-            await manager.broadcast(f"Order {order_id} cancelled")
-            return {"message": f"Order {order_id} cancelled successfully"}
-    raise HTTPException(status_code=404, detail="Order not found")
+@app.get("/")
+def root():
+    return {"message": "Welcome to the Crypto Matching Engine API!"}

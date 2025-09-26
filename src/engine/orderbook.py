@@ -146,6 +146,20 @@ class OrderBook:
 
         return trades
 
+    def get_all_bids(self) -> List[Dict[str, float]]:
+        """Returns all bid orders aggregated by price level."""
+        return [{
+            "price": float(price),
+            "quantity": sum(order.remaining_quantity for order in self.bid_queues[price])
+        } for price in self.bids.keys()]
+
+    def get_all_asks(self) -> List[Dict[str, float]]:
+        """Returns all ask orders aggregated by price level."""
+        return [{
+            "price": float(price),
+            "quantity": sum(order.remaining_quantity for order in self.ask_queues[price])
+        } for price in self.asks.keys()]
+
     def _add_to_book(self, order: Order) -> None:
         """Add an order to the order book"""
         if order.side == OrderSide.BUY:

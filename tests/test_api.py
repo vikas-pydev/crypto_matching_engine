@@ -89,3 +89,5 @@ async def test_orderbook_websocket():
         data = websocket.receive_json()
         assert "bids" in data
         assert len(data["bids"]) > 0
+        await asyncio.sleep(0.1) # Add a small delay
+    websocket.close() # Explicitly close the websocket

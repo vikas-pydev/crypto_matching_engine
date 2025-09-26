@@ -1,213 +1,142 @@
-# Cryptocurrency Matching Engine
+# Crypto Matching Engine
 
-A basic cryptocurrency order matching engine with price-time priority.
+This project implements a high-performance cryptocurrency matching engine, designed to facilitate real-time trading of digital assets. It features a robust backend for order matching and market data dissemination, coupled with an interactive frontend for order submission and visualization.
 
-## Features
-- Price-Time Priority Matching
-- Market & Limit Orders
-- Real-time Order Book Management
+## Project Goal
 
-## Quick Start
-```python
-from src.engine.order import Order, OrderType, OrderSide
-from src.engine.orderbook import OrderBook
+The primary goal is to develop a reliable, efficient, and scalable matching engine that can handle a high throughput of orders and provide accurate market data updates. The system aims to demonstrate best practices in concurrent programming, real-time data processing, and responsive web development.
 
-# Create order book
-book = OrderBook("BTC-USD")
+## Initial Setup
 
-# Create and add a buy order
-buy_order = Order(
-    order_id="buy1",
-    symbol="BTC-USD",
-    order_type=OrderType.LIMIT,
-    side=OrderSide.BUY,
-    quantity=1.0,
-    price=50000.0,
-    remaining_quantity=1.0
-)
-book.add_order(buy_order)
+To get the project up and running, follow these steps:
 
-# Create and add a matching sell order
-sell_order = Order(
-    order_id="sell1",
-    symbol="BTC-USD",
-    order_type=OrderType.LIMIT,
-    side=OrderSide.SELL,
-    quantity=1.0,
-    price=50000.0,
-    remaining_quantity=1.0
-)
-trades = book.add_order(sell_order)
-```
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository_url>
+    cd crypto_matching_engine
+    ```
 
-## Project Structure
+2.  **Set up Python Virtual Environment:**
+    It's highly recommended to use a virtual environment to manage dependencies.
+    ```bash
+    python -m venv venv
+    ./venv/Scripts/activate  # On Windows
+    source venv/bin/activate # On macOS/Linux
+    ```
 
-## Test the Engine
-Run the demonstration:
-```bash
-python working_demo.py
-```
+3.  **Install Dependencies:**
+    Install the required Python packages for both the backend and frontend.
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-This will show:
-1. Adding limit orders
-2. Order matching
-3. Trade generation
-4. Order book state
+4.  **Run the Backend Server:**
+    The backend is built with FastAPI and Uvicorn. Navigate to the project root and run:
+    ```bash
+    uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    ```
+    This will start the WebSocket server, handling order submissions and market data.
 
-## Project Structure
-```
-crypto_matching_engine/
-├── src/engine/         # Core engine
-├── tests/             # Test suite
-├── working_demo.py    # Demo script
-└── requirements.txt   # Dependencies
-```
-```
+5.  **Run the Frontend Server:**
+    The frontend is a simple HTML/CSS/JavaScript application. You can serve it using a basic Python HTTP server:
+    ```bash
+    python -m http.server 8080
+    ```
 
-## Installation
+6.  **Access the Frontend UI:**
+    Open your web browser and navigate to `http://localhost:8080`.
 
-1. Create and activate virtual environment:
-```powershell
-python -m venv venv
-.\venv\Scripts\activate
-```
+## Core Matching Engine Logic
 
-2. Install dependencies:
-```powershell
-pip install -r requirements.txt
-```
+The heart of the system is the matching engine, implemented in Python, which processes and matches buy and sell orders.
 
-## Usage Example
+### Best Bid and Offer (BBO) Calculation
 
-```python
-from engine import Order, OrderBook
+The BBO represents the best available buy (bid) and sell (offer) prices in the order book. It is continuously updated as orders are placed, cancelled, or matched. The engine efficiently tracks the highest bid and lowest ask to provide real-time market depth.
 
-# Create an order book
-book = OrderBook(symbol="BTC-USD")
+### Internal Order Protection
 
-# Create some orders
-buy_order = Order(
-    order_id="buy1",
-    side="buy",
-    order_type="limit",
-    price=50000.0,
-    quantity=1.0,
-    symbol="BTC-USD"
-)
+To prevent self-trading (an order matching against another order from the same user), the matching engine incorporates internal order protection. This ensures that a user's buy order will not execute against their own sell order, maintaining fair and logical trading.
 
-sell_order = Order(
-    order_id="sell1",
-    side="sell",
-    order_type="limit",
-    price=50000.0,
-    quantity=1.0,
-    symbol="BTC-USD"
-)
+### Price-Time Priority
 
-# Process orders
-book.add_order(buy_order)   # Added to book
-trades = book.add_order(sell_order)  # Matches with buy_order
+Orders are matched based on a strict price-time priority algorithm:
 
-print(f"Trades: {trades}")
-```
+*   **Price Priority:** Buy orders with higher prices have priority, and sell orders with lower prices have priority.
+*   **Time Priority:** Among orders at the same price level, the order that was submitted earlier in time has priority.
 
-## Running Tests
+This ensures a fair and transparent matching process.
 
-```bash
-python -m pytest tests/
-```
+### Order Type Handling
 
-## API Reference
+The engine supports various order types to cater to different trading strategies:
 
-### REST API Endpoints
+*   **Limit Orders:** Orders to buy or sell at a specified price or better. These orders enter the order book if they are not immediately matched.
+*   **Market Orders:** Orders to buy or sell immediately at the best available current market price. Market orders are guaranteed to execute but not at a guaranteed price.
+*   **Stop Orders:** (Planned/Future Enhancement) Orders that become market orders once a specified stop price is reached.
+*   **Stop-Limit Orders:** (Planned/Future Enhancement) Orders that become limit orders once a specified stop price is reached.
 
-#### Submit Order
-```http
-POST /api/v1/orders
-```
+## Data Generation and API Specifications
 
-Parameters:
-```json
-{
-    "symbol": "BTC-USDT",
-    "side": "buy",
-    "order_type": "limit",
-    "quantity": 1.0,
-    "price": 25000.0
-}
-```
+### Order Submission
 
-Order Types:
-- `market`: Market order (price optional)
-- `limit`: Limit order (price required)
-- `ioc`: Immediate-or-Cancel
-- `fok`: Fill-or-Kill
+Orders are submitted to the backend via WebSocket connections. The API expects order messages to contain:
 
-### WebSocket API
+*   `symbol`: The trading pair (e.g., "BTC/USD").
+*   `type`: Order type (e.g., "limit", "market").
+*   `side`: "buy" or "sell".
+*   `price`: (For limit orders) The desired price.
+*   `quantity`: The amount to trade.
 
-#### Order Book Updates
-```
-ws://localhost:8000/ws/orderbook/{symbol}
-```
+### Market Data Dissemination
 
-Example response:
-```json
-{
-    "timestamp": "2025-09-25T10:00:00.000Z",
-    "symbol": "BTC-USDT",
-    "bids": [[50000.0, 1.5], [49900.0, 2.0]],
-    "asks": [[50100.0, 1.0], [50200.0, 2.5]]
-}
-```
+The backend continuously disseminates real-time market data to connected clients via WebSockets. This includes:
 
-## Implementation Details
+*   **Order Book Snapshots:** Updates on the current state of bids and asks, typically showing aggregated price levels and quantities.
+*   **Trade Executions:** Notifications of executed trades, including price, quantity, and timestamp.
 
-### Order Book
-- SortedDict-based implementation for O(log n) operations
-- Price-time priority queues at each price level
-- Efficient order matching and execution
-- Real-time market data updates
+### Trade Execution Data
 
-### Order Types
-1. **Market Orders**
-   - Immediate execution at best available prices
-   - Can result in partial fills
+When trades occur, the system generates and broadcasts trade execution reports, providing details such as:
 
-2. **Limit Orders**
-   - Price-protected execution
-   - Added to book if not immediately matched
+*   `trade_id`: Unique identifier for the trade.
+*   `symbol`: Trading pair.
+*   `price`: Execution price.
+*   `quantity`: Executed quantity.
+*   `timestamp`: Time of execution.
 
-3. **IOC (Immediate-or-Cancel)**
-   - Attempt immediate execution
-   - Cancel any unfilled quantity
+## Technical Requirements
 
-4. **FOK (Fill-or-Kill)**
-   - Execute entirely or cancel
-   - No partial fills allowed
+### Implementation in Python
 
-### Test Coverage
-- **Order Tests**: Creation, validation, status updates
-- **OrderBook Tests**: 
-  - Price-time priority matching
-  - Market/Limit order execution
-  - IOC/FOK handling
-  - Order cancellation
-  - Book snapshot generation
-- **API Tests**:
-  - REST endpoint validation
-  - WebSocket streaming
-  - Error handling
-- **Visualization Tests**:
-  - Order book depth charts
-  - Trade flow diagrams
+The entire matching engine and API are implemented in Python, leveraging its rich ecosystem for asynchronous programming and data structures.
 
-## Performance Considerations
+### High Performance
 
-- Optimized data structures for order book operations
-- Efficient order matching algorithm
-- Real-time market data updates
-- WebSocket-based streaming for low latency
+Optimizations are applied to ensure low-latency order processing and high throughput. This includes efficient data structures for the order book and asynchronous handling of WebSocket connections.
 
-## License
+### Error Handling
 
-MIT License
+Robust error handling mechanisms are in place to manage invalid order submissions, network issues, and unexpected system states, ensuring the stability and reliability of the engine.
+
+### Logging
+
+Comprehensive logging is implemented across the system to monitor order flow, trade executions, and system health. This aids in debugging, auditing, and performance analysis.
+
+### Testing
+
+Unit and integration tests are developed to ensure the correctness of the matching logic, API endpoints, and overall system behavior.
+
+### Documentation
+
+This `README.md` serves as a primary documentation source, complemented by inline code comments and potentially more detailed design documents.
+
+## Bonus: Interactive Frontend
+
+The project includes a simple yet interactive frontend built with HTML, CSS, and JavaScript. It connects to the backend via WebSockets to:
+
+*   **Submit Orders:** Users can place buy/sell orders through a user-friendly interface.
+*   **Visualize Order Book:** Real-time updates of the order book (bids and asks) are displayed dynamically.
+*   **View Trade History:** Executed trades are shown as they occur, providing immediate feedback on market activity.
+
+This frontend demonstrates the real-time capabilities of the matching engine and provides a practical way to interact with the system.
